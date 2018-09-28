@@ -18,7 +18,6 @@ package stun
 
 import (
 	"log"
-	"os"
 )
 
 // Logger is a simple logger specified for this STUN client.
@@ -28,9 +27,20 @@ type Logger struct {
 	info  bool
 }
 
+type stdLogger struct{}
+
+func (l *stdLogger) Write(b []byte) (n int, err error) {
+	if len(b) > 20 {
+		log.Print(string(b[20:]))
+	}
+	return len(b), nil
+}
+
+var std = &stdLogger{}
+
 // NewLogger creates a default logger.
 func NewLogger() *Logger {
-	logger := &Logger{*log.New(os.Stdout, "", log.LstdFlags), false, false}
+	logger := &Logger{*log.New(std, "", log.LstdFlags), false, false}
 	return logger
 }
 
