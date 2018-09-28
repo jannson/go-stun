@@ -169,8 +169,8 @@ func (c *Client) discoverIptables(conn net.PacketConn, addr *net.UDPAddr) (NATTy
 	if err != nil {
 		return NATError, nil, err
 	}
-	serverAddr1 := resp.serverAddr
-	identical := resp.identical
+	c.logger.Debugln("Received resp1:", resp)
+	localAddr1 := resp.mappedAddr
 	changedAddr := resp.changedAddr
 	if changedAddr == nil {
 		changedAddr = resp.otherAddr
@@ -183,16 +183,7 @@ func (c *Client) discoverIptables(conn net.PacketConn, addr *net.UDPAddr) (NATTy
 	if err != nil {
 		return NATError, nil, err
 	}
-
-	if identical {
-		if resp == nil {
-			return NATSymetricUDPFirewall, nil, nil
-		}
-		return NATNone, nil, nil
-	}
-	if resp != nil {
-		return NATFull, nil, nil
-	}
+	c.logger.Debugln("Received resp2:", resp)
 
 	caddr, err := net.ResolveUDPAddr("udp", changedAddr.String())
 	if err != nil {
@@ -203,9 +194,10 @@ func (c *Client) discoverIptables(conn net.PacketConn, addr *net.UDPAddr) (NATTy
 	if err != nil {
 		return NATError, nil, err
 	}
+	c.logger.Debugln("Received resp3:", resp)
 
-	serverAddr2 := resp.serverAddr
-	if serverAddr1.IP() != serverAddr2.IP() && serverAddr1.Port() != serverAddr2.Port() {
+	localAddr2 := resp.mappedAddr
+	if localAddr1.IP() != localAddr2.IP() && localAddr1.Port() != localAddr2.Port() {
 		return NATSymetric, nil, nil
 	}
 
