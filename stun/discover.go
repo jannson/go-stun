@@ -163,3 +163,51 @@ func (c *Client) discover(conn net.PacketConn, addr *net.UDPAddr) (NATType, *Hos
 	}
 	return NATSymetric, mappedAddr, nil
 }
+
+func (c *Client) discoverIptables(conn net.PacketConn, addr *net.UDPAddr) (NATType, *Host, error) {
+	resp, err := c.test1(conn, addr)
+	if err != nil {
+		return NATError, nil, err
+	}
+	serverAddr1 := resp.serverAddr
+	identical := resp.identical
+	changedAddr := resp.changedAddr
+	if changedAddr == nil {
+		changedAddr = resp.otherAddr
+	}
+	if changedAddr == nil {
+		return NATError, nil, errors.New("Server error: no changed address.")
+	}
+
+	resp, err = c.test2(conn, addr)
+	if err != nil {
+		return NATError, nil, err
+	}
+
+	if identical {
+		if resp == nil {
+			return NATSymetricUDPFirewall, nil, nil
+		}
+		return NATNone, nil, nil
+	}
+	if resp != nil {
+		return NATFull, nil, nil
+	}
+
+	caddr, err := net.ResolveUDPAddr("udp", changedAddr.String())
+	if err != nil {
+		return NATError, nil, errors.New("Server error: changed address error.")
+	}
+
+	resp, err = c.test1(conn, caddr)
+	if err != nil {
+		return NATError, nil, err
+	}
+
+	serverAddr2 := resp.serverAddr
+	if serverAddr1.IP() != serverAddr2.IP() && serverAddr1.Port() != serverAddr2.Port() {
+		return NATSymetric, nil, nil
+	}
+
+	return NATPortRestricted, nil, nil
+}

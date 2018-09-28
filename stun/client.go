@@ -101,6 +101,25 @@ func (c *Client) Discover() (NATType, *Host, error) {
 	return c.discover(conn, serverUDPAddr)
 }
 
+func (c *Client) DiscoverIptables() (NATType, *Host, error) {
+	if c.serverAddr == "" {
+		c.SetServerAddr(DefaultServerAddr)
+	}
+	serverUDPAddr, err := net.ResolveUDPAddr("udp", c.serverAddr)
+	if err != nil {
+		return NATError, nil, err
+	}
+	conn := c.conn
+	if conn == nil {
+		conn, err = net.ListenUDP("udp", nil)
+		if err != nil {
+			return NATError, nil, err
+		}
+		defer conn.Close()
+	}
+	return c.discoverIptables(conn, serverUDPAddr)
+}
+
 // Keepalive sends and receives a bind request, which ensures the mapping stays open
 // Only applicable when client was created with a connection.
 func (c *Client) Keepalive() (*Host, error) {
